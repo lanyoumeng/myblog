@@ -6,15 +6,20 @@
 package myblog
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+var (
+	cfgFile string
 )
 
 func NewMyBlogCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "myblog",
-
+		Use:   "myblog",
 		Short: "The firsr project(blog)",
 		Long: `A good Go practical project, used to create user with basic information.
 
@@ -35,11 +40,23 @@ Find more miniblog information at:
 			return nil
 		},
 	}
+
+	cobra.OnInitialize(initConfig)
+
+	cmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.myblog.yaml)")
 	return cmd
 
 }
 
 func run() error {
-	fmt.Println("Hello")
+	settings, err := json.Marshal(viper.AllSettings())
+	if err != nil {
+		fmt.Println("JSON serialization error:", err)
+		return err
+	}
+	fmt.Println(string(settings))
+
+	fmt.Println(viper.Get("db.username"))
+
 	return nil
 }

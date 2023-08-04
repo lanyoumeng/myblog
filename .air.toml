@@ -56,7 +56,9 @@ rerun_delay = 500
 
 
 # Add additional arguments when running binary (bin/full_bin). Will run './tmp/main hello world'.
- args_bin = ["-c", "configs/myblog.yaml"]
+args_bin = ["-c", "configs/myblog.yaml"] 
+ #这个配置项被用于运行二进制文件 _output/miniblog 或 APP_ENV=dev APP_USER=air ./_output/miniblog。
+ #当运行该二进制文件时，会传递参数 -c configs/miniblog.yaml 给它。
 
 
 [log]
