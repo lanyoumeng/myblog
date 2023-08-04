@@ -5,9 +5,22 @@
 
 package main
 
-import "fmt"
+import (
+	// "command-line-arguments/home/goer/workspace/lanmengyou/myblog/internal/myblog/myblog.go"
+
+	"blog/internal/myblog"
+	"os"
+
+	_ "go.uber.org/automaxprocs"
+	// "../internal/myblog"
+	// "lanmengyou/myblog/internal/myblog"
+)
 
 // Go 程序的默认入口函数(主函数).
+
 func main() {
-	fmt.Println("Hello  MiniBlog!")
+	command := myblog.NewMyBlogCommand()
+	if err := command.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

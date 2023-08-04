@@ -6,21 +6,33 @@
 package main
 
 import (
-	"net/http"
+	"fmt"
+	"os"
 
-	"github.com/gin-gonic/gin"
+	"github.com/spf13/cobra"
 )
 
+var (
+	version string // 这里定义版本信息
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "myapp",
+	Short: "A brief description of your application",
+	Long:  "A longer description of your application",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Hello, this is the root command!")
+	},
+}
+
+func init() {
+	rootCmd.Flags().StringVarP(&version, "version", "v", "", "Print the version number")
+
+}
+
 func main() {
-
-	r := gin.Default()
-	r.GET("/data", func(c *gin.Context) {
-		data := gin.H{
-			"key1": "value1",
-			"key2": 123,
-		}
-		c.JSON(http.StatusOK, data)
-	})
-	r.Run(":8080")
-
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
