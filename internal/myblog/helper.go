@@ -6,7 +6,7 @@
 package myblog
 
 import (
-	"fmt"
+	"blog/internal/pkg/log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,6 +39,18 @@ func initConfig() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 
 	if err := viper.ReadInConfig(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		log.Errorw("Failed to read viper configuration file", "err", err)
+	}
+	log.Infow("Using config file", "file", viper.ConfigFileUsed())
+}
+
+func logOptions() *log.Options {
+
+	return &log.Options{
+		DisableCaller:     viper.GetBool("log.disable-caller"),
+		DisableStacktrace: viper.GetBool("log. disable-stacktrace"),
+		Level:             viper.GetString("log.level"),
+		Format:            viper.GetString("log.format"),
+		OutputPaths:       viper.GetStringSlice("log.output-paths"),
 	}
 }

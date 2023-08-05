@@ -6,33 +6,25 @@
 package main
 
 import (
-	"time"
+	"flag"
+	"fmt"
+)
 
-	"go.uber.org/zap"
+var (
+	// GitVersion 是语义化的版本号.
+	GitVersion = "v0.0.0-master+$Format:%h$"
+	// BuildDate 是 ISO8601 格式的构建时间, $(date -u +'%Y-%m-%dT%H:%M:%SZ') 命令的输出.
+	BuildDate = "1970-01-01T00:00:00Z"
 )
 
 func main() {
-	logger, _ := zap.NewProduction(zap.AddCaller()) // 创建一个Zap日志记录器,并增加行号和文件名
-	defer logger.Sync()                             // 刷新磁盘
+	version := flag.Bool("version", false, "Print version info.")
+	flag.Parse()
 
-	url := "http://marmotedu.com"
-	logger.Info("failed to fetch URL", // 结构化日志记录
-		zap.String("url", url),
-		zap.Int("attempt", 3),
-		zap.Duration("backoff", time.Second),
-	)
-	logger.Info("hello world") // 使用日志记录器输出日志
+	if *version {
+		fmt.Println("GitVersion", GitVersion)
+		fmt.Println("BuildDate", BuildDate)
+	}
 
-	sugar := logger.Sugar()
-	sugar = sugar.With(zap.String("name", "lmy")) // 添加公共字段。
-
-	sugar.Infow("failed to fetch URL",
-		"url", url,
-		"attempt", 3,
-		"backoff", time.Second,
-	)
-
-	sugar.Info("HEllo ")                        //一个字符串参数
-	sugar.Infof("Failed to fetch URL: %s", url) //f-->传参
-	logger.Sugar().Infow("creat", "lmy")        //w--> 一个或多个 key-value 对
+	fmt.Println("ok")
 }
