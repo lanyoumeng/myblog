@@ -6,33 +6,33 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"time"
 
-	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
-
-var (
-	version string // 这里定义版本信息
-)
-
-var rootCmd = &cobra.Command{
-	Use:   "myapp",
-	Short: "A brief description of your application",
-	Long:  "A longer description of your application",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Hello, this is the root command!")
-	},
-}
-
-func init() {
-	rootCmd.Flags().StringVarP(&version, "version", "v", "", "Print the version number")
-
-}
 
 func main() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	logger, _ := zap.NewProduction(zap.AddCaller()) // 创建一个Zap日志记录器,并增加行号和文件名
+	defer logger.Sync()                             // 刷新磁盘
+
+	url := "http://marmotedu.com"
+	logger.Info("failed to fetch URL", // 结构化日志记录
+		zap.String("url", url),
+		zap.Int("attempt", 3),
+		zap.Duration("backoff", time.Second),
+	)
+	logger.Info("hello world") // 使用日志记录器输出日志
+
+	sugar := logger.Sugar()
+	sugar = sugar.With(zap.String("name", "lmy")) // 添加公共字段。
+
+	sugar.Infow("failed to fetch URL",
+		"url", url,
+		"attempt", 3,
+		"backoff", time.Second,
+	)
+
+	sugar.Info("HEllo ")                        //一个字符串参数
+	sugar.Infof("Failed to fetch URL: %s", url) //f-->传参
+	logger.Sugar().Infow("creat", "lmy")        //w--> 一个或多个 key-value 对
 }
