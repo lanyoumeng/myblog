@@ -2,29 +2,20 @@
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file. The original repo for
 // this file is https://github.com/lanyoumeng/myblog.git.
-
 package main
 
-import (
-	"flag"
-	"fmt"
-)
-
-var (
-	// GitVersion 是语义化的版本号.
-	GitVersion = "v0.0.0-master+$Format:%h$"
-	// BuildDate 是 ISO8601 格式的构建时间, $(date -u +'%Y-%m-%dT%H:%M:%SZ') 命令的输出.
-	BuildDate = "1970-01-01T00:00:00Z"
-)
+import "go.uber.org/zap"
 
 func main() {
-	version := flag.Bool("version", false, "Print version info.")
-	flag.Parse()
+	//1.创建Logger时使用Fields(fs ...Field)选项
+	logger := zap.NewExample(zap.Fields(
+		zap.Int("userID", 10),
+		zap.String("requestID", "fbf54504"),
+	))
+	logger.Info("This is a info message")
 
-	if *version {
-		fmt.Println("GitVersion", GitVersion)
-		fmt.Println("BuildDate", BuildDate)
-	}
-
-	fmt.Println("ok")
+	//2. 不更改原始日志记录器的情况下，为特定的日志记录添加
+	//logger, _ := zap.NewProduction(zap.Fields(zap.String("name", "dj"))) 已被废弃，推荐使用
+	logger = logger.With(zap.String("app", "myapp"))
+	logger.Info("This is a info message")
 }

@@ -6,11 +6,22 @@
 package myblog
 
 import (
+	"blog/internal/pkg/core"
+	"blog/internal/pkg/errno"
 	"blog/internal/pkg/log"
 	"blog/pkg/version/verflag"
-	"encoding/json"
+	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	mw "blog/internal/pkg/middleware"
+
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -63,14 +74,60 @@ Find more miniblog information at:
 }
 
 func run() error {
-	settings, err := json.Marshal(viper.AllSettings())
-	if err != nil {
-		fmt.Println("JSON serialization error:", err)
+	// settings, err := json.Marshal(viper.AllSettings())
+	// if err != nil {
+	// 	fmt.Println("JSON serialization error:", err)
+	// 	return err
+	// }
+	// log.Infow(string(settings))
+
+	// log.Infow(viper.GetString("db.username"))
+	gin.SetMode(viper.GetString("runmode"))
+
+	router := gin.New()
+
+	mws := []gin.HandlerFunc{gin.Recovery(), mw.NoCache, mw.Cors, mw.Secure, mw.RequestID()}
+	router.Use(mws...)
+
+	router.NoRoute(func(ctx *gin.Context) {
+		core.WriteResponse(ctx, errno.ErrPageNotFound, nil)
+
+	})
+
+	router.GET("/healthz", func(ctx *gin.Context) {
+		log.C(ctx).Infow("Healthz function called")
+		core.WriteResponse(ctx, nil, map[string]string{"status": "ok"})
+
+	})
+
+	httpsrv := &http.Server{Addr: viper.GetString("addr"), Handler: router}
+
+	log.Infow("Start to  listening the incoming request on  http address", "addr", viper.GetString("addr"))
+
+	// if err := httpsrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	// 	log.Fatalw(err.Error())
+	// }
+	go func() {
+		if err := httpsrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalw(err.Error())
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Infow("Shutting down server ...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+	defer cancel()
+	if err := httpsrv.Shutdown(ctx); err != nil {
+		log.Errorw("Insecure Server forced to shutdown", "err", err)
 		return err
 	}
-	log.Infow(string(settings))
-
-	log.Infow(viper.GetString("db.username"))
+	log.Infow("Server exiting")
 
 	return nil
 }

@@ -6,9 +6,12 @@
 package log
 
 import (
+	"blog/pkg/known"
+	"context"
 	"sync"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -102,7 +105,7 @@ func NewLogger(opts *Options) *zapLogger {
 }
 
 // Sync 调用底层 zap.Logger 的 Sync 方法，将缓存中的日志刷新到磁盘文件中. 主程序需要在退出前调用 Sync.
-func Sync() { std.Sync() } //全局
+func Sync() { std.Sync() } //全局 直接调用包（log.Sync）
 
 func (l *zapLogger) Sync() { //局部
 	_ = l.z.Sync()
@@ -160,4 +163,29 @@ func Fatalw(msg string, keysAndValues ...interface{}) {
 
 func (l *zapLogger) Fatalw(msg string, keysAndValues ...interface{}) {
 	l.z.Sugar().Fatalw(msg, keysAndValues...)
+}
+
+func C(ctx *gin.Context) *zapLogger {
+	return std.C(ctx)
+}
+
+func (l *zapLogger) C(ctx context.Context) *zapLogger {
+	lc := l.clone()
+
+	if requestID := ctx.Value(known.XRequestIDKey); requestID != nil {
+		lc.z = lc.z.With(zap.Any(known.XRequestIDKey, requestID))
+	}
+	if userID := ctx.Value(known.XUsernameKey); userID != nil {
+		lc.z = lc.z.With(zap.Any(known.XUsernameKey, userID))
+	}
+
+	return lc
+
+}
+
+//因为 log 包被多个请求并发调用，为了防止 X-Request-ID 污染，针对每一个请求，我们都深拷贝一个 *zapLogger 对象，然后再添加 X-Request-ID。
+
+func (l *zapLogger) clone() *zapLogger {
+	lc := *l
+	return &lc
 }
