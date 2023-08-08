@@ -41,6 +41,21 @@ func Init(key string, identityKey string) {
 	})
 }
 
+// ParseRequest 从请求头中获取令牌，并将其传递给 Parse 函数以解析令牌.
+func ParseRequest(c *gin.Context) (string, error) {
+	header := c.Request.Header.Get("Authorization")
+
+	if len(header) == 0 {
+		return "", ErrMissingHeader
+	}
+
+	var t string
+	// 从请求头中取出 token
+	fmt.Sscanf(header, "Bearer %s", &t)
+
+	return Parse(t, config.key)
+}
+
 // Parse 使用指定的密钥 key 解析 token，解析成功返回 token 上下文，否则报错.
 func Parse(tokenString string, key string) (string, error) {
 	// 解析 token
@@ -64,21 +79,6 @@ func Parse(tokenString string, key string) (string, error) {
 	}
 
 	return identityKey, nil
-}
-
-// ParseRequest 从请求头中获取令牌，并将其传递给 Parse 函数以解析令牌.
-func ParseRequest(c *gin.Context) (string, error) {
-	header := c.Request.Header.Get("Authorization")
-
-	if len(header) == 0 {
-		return "", ErrMissingHeader
-	}
-
-	var t string
-	// 从请求头中取出 token
-	fmt.Sscanf(header, "Bearer %s", &t)
-
-	return Parse(t, config.key)
 }
 
 // Sign 使用 jwtSecret 签发 token，token 的 claims 中会存放传入的 subject.

@@ -17,3 +17,12 @@ ctx context.Context
 
 
 深拷贝
+
+使用 govalidator.ValidateStruct 来进行参数校验。govalidator 包能够根据结构体中的 valid tag 进行校验，并支持多种校验规则，
+
+
+bcrypt 加密纯文本.
+
+JWT token包
+
+//controller使用gin.context   biz和store使用context.context

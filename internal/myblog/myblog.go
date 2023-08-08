@@ -6,9 +6,9 @@
 package myblog
 
 import (
-	"blog/internal/pkg/core"
-	"blog/internal/pkg/errno"
 	"blog/internal/pkg/log"
+	"blog/pkg/known"
+	"blog/pkg/token"
 	"blog/pkg/version/verflag"
 	"context"
 	"errors"
@@ -74,14 +74,13 @@ Find more miniblog information at:
 }
 
 func run() error {
-	// settings, err := json.Marshal(viper.AllSettings())
-	// if err != nil {
-	// 	fmt.Println("JSON serialization error:", err)
-	// 	return err
-	// }
-	// log.Infow(string(settings))
+	if err := initStore(); err != nil {
+		return err
+	}
 
-	// log.Infow(viper.GetString("db.username"))
+	// 设置 token 包的签发密钥，用于 token 包 token 的签发和解析
+	token.Init(viper.GetString("jwt-secret"), known.XUsernameKey)
+
 	gin.SetMode(viper.GetString("runmode"))
 
 	router := gin.New()
@@ -89,21 +88,12 @@ func run() error {
 	mws := []gin.HandlerFunc{gin.Recovery(), mw.NoCache, mw.Cors, mw.Secure, mw.RequestID()}
 	router.Use(mws...)
 
-	router.NoRoute(func(ctx *gin.Context) {
-		core.WriteResponse(ctx, errno.ErrPageNotFound, nil)
-
-	})
-
-	router.GET("/healthz", func(ctx *gin.Context) {
-		log.C(ctx).Infow("Healthz function called")
-		core.WriteResponse(ctx, nil, map[string]string{"status": "ok"})
-
-	})
+	if err := installRouters(router); err != nil {
+		return err
+	}
 
 	httpsrv := &http.Server{Addr: viper.GetString("addr"), Handler: router}
-
 	log.Infow("Start to  listening the incoming request on  http address", "addr", viper.GetString("addr"))
-
 	// if err := httpsrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 	// 	log.Fatalw(err.Error())
 	// }
@@ -114,7 +104,6 @@ func run() error {
 	}()
 
 	quit := make(chan os.Signal, 1)
-
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
