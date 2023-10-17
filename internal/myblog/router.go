@@ -29,7 +29,8 @@ func installRouters(g *gin.Engine) error {
 		core.WriteResponse(c, nil, map[string]string{"status": "ok"})
 	})
 
-	uc := user.New(store.S)
+	uc := user.New(store.S) //用store层的一个db（在helper.go初始化函数）创建一个controller实例
+
 	g.POST("/login", uc.Login)
 
 	//创建 v1 路由分组

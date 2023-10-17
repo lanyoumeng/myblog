@@ -26,3 +26,6 @@ bcrypt 加密纯文本.
 JWT token包
 
 //controller使用gin.context   biz和store使用context.context
+
+
+UUID

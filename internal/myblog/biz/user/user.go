@@ -72,6 +72,7 @@ func (b *userBiz) Login(ctx context.Context, r *v1.LoginRequest) (*v1.LoginRespo
 	return &v1.LoginResponse{Token: t}, nil
 
 }
+
 func (b *userBiz) ChangePassword(ctx context.Context, username string, r *v1.ChangePasswordRequest) error {
 	userM, err := b.ds.Users().Get(ctx, username)
 	if err != nil {
