@@ -6,6 +6,7 @@
 package db
 
 import (
+	"blog/internal/pkg/model"
 	"fmt"
 	"time"
 
@@ -65,6 +66,7 @@ func NewMySQL(opts *MySQLOptions) (*gorm.DB, error) {
 
 	// SetMaxIdleConns 设置空闲连接池的最大连接数
 	sqlDB.SetMaxIdleConns(opts.MaxIdleConnections)
+	db.AutoMigrate(model.PostM{}, model.UserM{})
 
 	return db, nil
 }

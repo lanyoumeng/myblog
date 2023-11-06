@@ -15,6 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const defaultMethods = "(GET)|(POST)|(PUT)|(DELETE)"
+
 func (ctrl *UserController) Create(c *gin.Context) {
 	log.C(c).Infow("Create user function called")
 
@@ -27,13 +29,16 @@ func (ctrl *UserController) Create(c *gin.Context) {
 
 	if _, err := govalidator.ValidateStruct(r); err != nil {
 		core.WriteResponse(c, errno.ErrInvalidParameter.SetMessage(err.Error()), nil)
-
 		return
 	}
 
 	if err := ctrl.b.Users().Create(c, &r); err != nil {
 		core.WriteResponse(c, err, nil)
 
+		return
+	}
+	if _, err := ctrl.a.AddNamedPolicy("p", r.Username, "/v1/users/"+r.Username, defaultMethods); err != nil {
+		core.WriteResponse(c, err, nil)
 		return
 	}
 

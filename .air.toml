@@ -7,6 +7,8 @@ tmp_dir = "tmp"
 
 [build]
 # Just plain old shell command. You could use `make` as well.
+# 只需要写你平常编译使用的 shell 命令。你也可以使用 `make`.
+#cmd = "make build"
 cmd = "go build -o _output/myblog -v cmd/myblog/main.go"
 
 # Binary file yields from `cmd`.

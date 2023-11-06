@@ -13,9 +13,11 @@ import (
 	"blog/pkg/auth"
 	"blog/pkg/token"
 	"context"
+	"errors"
 	"regexp"
 
 	"github.com/jinzhu/copier"
+	"gorm.io/gorm"
 )
 
 // UserBiz 定义了 user 模块在 biz 层所实现的方法.
@@ -23,6 +25,8 @@ type UserBiz interface {
 	Create(ctx context.Context, r *v1.CreateUserRequest) error
 	Login(ctx context.Context, r *v1.LoginRequest) (*v1.LoginResponse, error)
 	ChangePassword(ctx context.Context, username string, r *v1.ChangePasswordRequest) error
+	Get(ctx context.Context, username string) (*v1.GetUserResponse, error)
+	List(ctx context.Context, offset, limit int) (*v1.ListUserResponse, error)
 }
 
 // UserBiz 接口的实现.
@@ -87,5 +91,22 @@ func (b *userBiz) ChangePassword(ctx context.Context, username string, r *v1.Cha
 		return err
 	}
 	return nil
+
+}
+func (b *userBiz) Get(ctx context.Context, username string) (*v1.GetUserResponse, error) {
+	user, err := b.ds.Users().Get(ctx, username)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errno.ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	var resp v1.GetUserResponse
+	_ = copier.Copy(&resp, user)
+
+	resp.CreatedAt = user.CreatedAt.Format("2006-01-02 15:04:05")
+	resp.UpdatedAt = user.UpdatedAt.Format("2006-01-02 15:04:05")
+	return &resp, nil
 
 }

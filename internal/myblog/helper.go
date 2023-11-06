@@ -18,8 +18,10 @@ import (
 )
 
 const (
-	defaultConfigName  = "myblog.yaml"
-	recommendedHomeDir = "workspace/lanmengyou/myblog/configs"
+	defaultConfigName = "myblog"
+	// recommendedHomeDir = "workspace/lanmengyou/myblog/configs"
+
+	recommendedHomeDir = ".myblog"
 )
 
 func initConfig() {

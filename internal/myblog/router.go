@@ -11,6 +11,8 @@ import (
 	"blog/internal/pkg/core"
 	"blog/internal/pkg/errno"
 	"blog/internal/pkg/log"
+	"blog/internal/pkg/middleware"
+	"blog/pkg/auth"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,7 +31,12 @@ func installRouters(g *gin.Engine) error {
 		core.WriteResponse(c, nil, map[string]string{"status": "ok"})
 	})
 
-	uc := user.New(store.S) //用store层的一个db（在helper.go初始化函数）创建一个controller实例
+	authz, err := auth.NewAuthz(store.S.DB())
+	if err != nil {
+		return err
+	}
+
+	uc := user.New(store.S, authz) //用store层的一个db（在helper.go初始化函数）创建一个controller实例
 
 	g.POST("/login", uc.Login)
 
@@ -41,6 +48,10 @@ func installRouters(g *gin.Engine) error {
 		{
 			userv1.POST("", uc.Create)
 			userv1.PUT(":name/change-password", uc.ChangePassword)
+
+			userv1.Use(middleware.Authn(), middleware.Authz(authz))
+
+			userv1.GET(":name", uc.Get)
 		}
 	}
 

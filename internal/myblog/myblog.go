@@ -5,7 +5,10 @@
 
 package myblog
 
+//$ kill `pgrep myblog`
 import (
+	"blog/internal/myblog/controller/v1/user"
+	"blog/internal/myblog/store"
 	"blog/internal/pkg/log"
 	"blog/pkg/known"
 	"blog/pkg/token"
@@ -13,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,10 +24,12 @@ import (
 	"time"
 
 	mw "blog/internal/pkg/middleware"
+	pb "blog/pkg/proto/myblog/v1"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -31,6 +37,7 @@ var (
 )
 
 func NewMyBlogCommand() *cobra.Command {
+
 	cmd := &cobra.Command{
 		Use:   "myblog",
 		Short: "The firsr project(blog)",
@@ -50,6 +57,7 @@ Find more miniblog information at:
 
 			return run()
 		},
+
 		Args: func(cmd *cobra.Command, args []string) error {
 			for _, arg := range args {
 				if len(arg) > 0 {
@@ -83,30 +91,30 @@ func run() error {
 
 	gin.SetMode(viper.GetString("runmode"))
 
-	router := gin.New()
+	g := gin.New()
 
 	mws := []gin.HandlerFunc{gin.Recovery(), mw.NoCache, mw.Cors, mw.Secure, mw.RequestID()}
-	router.Use(mws...)
+	g.Use(mws...)
 
-	if err := installRouters(router); err != nil {
+	if err := installRouters(g); err != nil {
 		return err
 	}
 
-	httpsrv := &http.Server{Addr: viper.GetString("addr"), Handler: router}
-	log.Infow("Start to  listening the incoming request on  http address", "addr", viper.GetString("addr"))
-	// if err := httpsrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-	// 	log.Fatalw(err.Error())
-	// }
-	go func() {
-		if err := httpsrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalw(err.Error())
-		}
-	}()
+	// 创建并运行 HTTP 服务器
+	httpsrv := startInsecureServer(g)
 
+	// 创建并运行 HTTPS 服务器
+	// httpssrv := startSecureServer(g)
+
+	// 创建并运行 GRPC 服务器
+	grpcsrv := startGRPCServer()
+
+	// 等待中断信号优雅地关闭服务器（10 秒超时)。
+	//quit := make(chan os.Signal, 1)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-
+	///////////////////////////////////////////////////////////////////////////
 	log.Infow("Shutting down server ...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -116,7 +124,68 @@ func run() error {
 		log.Errorw("Insecure Server forced to shutdown", "err", err)
 		return err
 	}
+	grpcsrv.GracefulStop()
 	log.Infow("Server exiting")
 
 	return nil
+}
+
+// startInsecureServer 创建并运行 HTTP 服务器.
+func startInsecureServer(g *gin.Engine) *http.Server {
+	// 创建 HTTP Server 实例
+	httpsrv := &http.Server{Addr: viper.GetString("addr"), Handler: g}
+
+	// 运行 HTTP 服务器。在 goroutine 中启动服务器，它不会阻止下面的正常关闭处理流程
+	// 打印一条日志，用来提示 HTTP 服务已经起来，方便排障
+	log.Infow("Start to listening the incoming requests on http address", "addr", viper.GetString("addr"))
+	go func() {
+		if err := httpsrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalw(err.Error())
+		}
+	}()
+
+	return httpsrv
+}
+
+// startSecureServer 创建并运行 HTTPS 服务器.
+func startSecureServer(g *gin.Engine) *http.Server {
+	// 创建 HTTPS Server 实例
+	httpssrv := &http.Server{Addr: viper.GetString("tls.addr"), Handler: g}
+
+	// 运行 HTTPS 服务器。在 goroutine 中启动服务器，它不会阻止下面的正常关闭处理流程
+	// 打印一条日志，用来提示 HTTPS 服务已经起来，方便排障
+	log.Infow("Start to listening the incoming requests on https address", "addr", viper.GetString("tls.addr"))
+	cert, key := viper.GetString("tls.cert"), viper.GetString("tls.key")
+	if cert != "" && key != "" {
+		go func() {
+			if err := httpssrv.ListenAndServeTLS(cert, key); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				log.Fatalw(err.Error())
+			}
+		}()
+	}
+
+	return httpssrv
+}
+
+// startGRPCServer 创建并运行 GRPC 服务器.
+func startGRPCServer() *grpc.Server {
+	lis, err := net.Listen("tcp", viper.GetString("grpc.addr"))
+	if err != nil {
+		log.Fatalw("Failed to listen", "err", err)
+	}
+
+	// 创建 GRPC Server 实例
+	grpcsrv := grpc.NewServer()
+	pb.RegisterMyBlogServer(grpcsrv, user.New(store.S, nil))
+
+	// 运行 GRPC 服务器。在 goroutine 中启动服务器，它不会阻止下面的正常关闭处理流程
+	// 打印一条日志，用来提示 GRPC 服务已经起来，方便排障
+	log.Infow("Start to listening the incoming requests on grpc address", "addr", viper.GetString("grpc.addr"))
+	go func() {
+		if err := grpcsrv.Serve(lis); err != nil {
+			log.Fatalw(err.Error())
+		}
+	}()
+
+	return grpcsrv
 }

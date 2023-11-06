@@ -8,12 +8,15 @@ ROOT_DIR := $(abspath $(shell cd $(COMMON_SELF_DIR)/ && pwd -P))
 OUTPUT_DIR := $(ROOT_DIR)/_output
 
 
+# Protobuf 文件存放路径
+APIROOT=$(ROOT_DIR)/pkg/proto
+
 
 # ==============================================================================
 # 定义版本相关变量
 
 ## 指定应用使用的 version 包，会通过 `-ldflags -X` 向该包中指定的变量注入值
-VERSION_PACKAGE=pkg/version
+VERSION_PACKAGE=blog/pkg/version
 
 ## 定义 VERSION 语义化版本号
 ifeq ($(origin VERSION), undefined)
@@ -31,11 +34,7 @@ GO_LDFLAGS += \
 	-X $(VERSION_PACKAGE).GitVersion=$(VERSION) \
 	-X $(VERSION_PACKAGE).GitCommit=$(GIT_COMMIT) \
 	-X $(VERSION_PACKAGE).GitTreeState=$(GIT_TREE_STATE) \
-	-X $(VERSION_PACKAGE).BuildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-
-
-
-
+    -X $(VERSION_PACKAGE).BuildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 
 # ==============================================================================
 # 定义 Makefile all 伪目标，执行 `make` 时，会默认会执行 all 伪目标
@@ -68,3 +67,13 @@ tidy: # 自动添加/移除依赖包.
 .PHONY: clean
 clean: # 清理构建产物、临时文件等.
 	@-rm -vrf $(OUTPUT_DIR)
+
+
+protoc: ## 编译 protobuf 文件.
+	@echo "===========> Generate protobuf files"
+	@protoc                                            \
+		--proto_path=$(APIROOT)                          \
+		--proto_path=$(ROOT_DIR)/third_party             \
+		--go_out=paths=source_relative:$(APIROOT)        \
+		--go-grpc_out=paths=source_relative:$(APIROOT)   \
+		$(shell find $(APIROOT) -name *.proto)
