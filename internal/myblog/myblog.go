@@ -25,6 +25,7 @@ import (
 
 	mw "blog/internal/pkg/middleware"
 	pb "blog/pkg/proto/myblog/v1"
+	_ "net/http/pprof"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
@@ -82,6 +83,7 @@ Find more miniblog information at:
 }
 
 func run() error {
+
 	if err := initStore(); err != nil {
 		return err
 	}

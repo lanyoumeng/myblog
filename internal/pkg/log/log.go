@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -165,7 +164,7 @@ func (l *zapLogger) Fatalw(msg string, keysAndValues ...interface{}) {
 	l.z.Sugar().Fatalw(msg, keysAndValues...)
 }
 
-func C(ctx *gin.Context) *zapLogger {
+func C(ctx context.Context) *zapLogger {
 	return std.C(ctx)
 }
 

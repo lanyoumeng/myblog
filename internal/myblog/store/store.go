@@ -21,6 +21,7 @@ var (
 type IStore interface {
 	Users() UserStore
 	DB() *gorm.DB
+	Posts() PostStore
 }
 
 // datastore 是 IStore 的一个具体实现.
@@ -47,4 +48,7 @@ func (ds *datastore) Users() UserStore {
 }
 func (ds *datastore) DB() *gorm.DB {
 	return ds.db
+}
+func (ds *datastore) Posts() PostStore {
+	return newPosts(ds.db)
 }
