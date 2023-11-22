@@ -83,7 +83,13 @@ Find more miniblog information at:
 }
 
 func run() error {
+	// go func() {
+	// 	log.Infow("err:", http.ListenAndServe("localhost:6060", nil))
+	// }()
 
+	go func() {
+		log.Infow("err:", http.ListenAndServe("0.0.0.0:6060", nil))
+	}()
 	if err := initStore(); err != nil {
 		return err
 	}
@@ -126,6 +132,7 @@ func run() error {
 		log.Errorw("Insecure Server forced to shutdown", "err", err)
 		return err
 	}
+
 	grpcsrv.GracefulStop()
 	log.Infow("Server exiting")
 

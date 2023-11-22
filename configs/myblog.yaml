@@ -9,7 +9,7 @@ addr: :8080                  # HTTP 服务器监听地址
 jwt-secret:  Rtg8BPKNEf2mB4mgvKONGPZZQSaJWNLijxR42qRgq0iBb5  # JWT 签发密钥
 
 db:
-  host: 127.0.0.1  # MySQL 机器 IP 和端口，默认 127.0.0.1:3306
+  host: 139.224.32.57  # MySQL 机器 IP 和端口，默认 127.0.0.1:3306
   username:  myblog # MySQL 用户名(建议授权最小权限集)
   password:  321+-321ToM # MySQL 用户密码
   database:  myblog # miniblog 系统所用的数据库名

@@ -6,14 +6,16 @@
 package myblog
 
 import (
+	"blog/internal/myblog/controller/v1/post"
 	"blog/internal/myblog/controller/v1/user"
 	"blog/internal/myblog/store"
 	"blog/internal/pkg/core"
 	"blog/internal/pkg/errno"
 	"blog/internal/pkg/log"
-	"blog/internal/pkg/middleware"
+	mw "blog/internal/pkg/middleware"
 	"blog/pkg/auth"
 
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,6 +32,8 @@ func installRouters(g *gin.Engine) error {
 
 		core.WriteResponse(c, nil, map[string]string{"status": "ok"})
 	})
+	// 注册 pprof 路由
+	pprof.Register(g)
 
 	authz, err := auth.NewAuthz(store.S.DB())
 	if err != nil {
@@ -37,6 +41,7 @@ func installRouters(g *gin.Engine) error {
 	}
 
 	uc := user.New(store.S, authz) //用store层的一个db（在helper.go初始化函数）创建一个controller实例
+	pc := post.New(store.S)
 
 	g.POST("/login", uc.Login)
 
@@ -46,12 +51,24 @@ func installRouters(g *gin.Engine) error {
 		// 创建 users 路由分组
 		userv1 := v1.Group("/users")
 		{
-			userv1.POST("", uc.Create)
-			userv1.PUT(":name/change-password", uc.ChangePassword)
+			userv1.POST("", uc.Create)                             // 创建用户
+			userv1.PUT(":name/change-password", uc.ChangePassword) // 修改用户密码
+			userv1.Use(mw.Authn(), mw.Authz(authz))
+			userv1.GET(":name", uc.Get)       // 获取用户详情
+			userv1.PUT(":name", uc.Update)    // 更新用户
+			userv1.GET("", uc.List)           // 列出用户列表，只有 root 用户才能访问
+			userv1.DELETE(":name", uc.Delete) // 删除用户
+		}
 
-			userv1.Use(middleware.Authn(), middleware.Authz(authz))
-
-			userv1.GET(":name", uc.Get)
+		// 创建 posts 路由分组
+		postv1 := v1.Group("/posts", mw.Authn())
+		{
+			postv1.POST("", pc.Create)             // 创建博客
+			postv1.GET(":postID", pc.Get)          // 获取博客详情
+			postv1.PUT(":postID", pc.Update)       // 更新用户
+			postv1.DELETE("", pc.DeleteCollection) // 批量删除博客
+			postv1.GET("", pc.List)                // 获取博客列表
+			postv1.DELETE(":postID", pc.Delete)    // 删除博客
 		}
 	}
 
